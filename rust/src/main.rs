@@ -1,5 +1,6 @@
 use pixelfixer::{autocorr, core, reconstruct, runlengths, selfsim};
 
+#[cfg(target_os = "windows")]
 /// Peak working-set size (bytes) of this process, via psapi.
 fn peak_rss() -> u64 {
     #[repr(C)]
@@ -29,6 +30,18 @@ fn peak_rss() -> u64 {
             0
         }
     }
+}
+
+#[cfg(not(target_os = "windows"))]
+/// Peak working-set size (bytes) of this process, via getrusage.
+fn peak_rss() -> u64 {
+    let mut rusage = std::mem::MaybeUninit::<libc::rusage>::uninit();
+    let maxrss_kb = unsafe {
+        libc::getrusage(libc::RUSAGE_SELF, rusage.as_mut_ptr());
+        rusage.assume_init()
+    }
+    .ru_maxrss as u64;
+    maxrss_kb * 1024
 }
 
 fn main() {

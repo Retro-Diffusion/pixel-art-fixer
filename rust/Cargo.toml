@@ -10,6 +10,9 @@ rustfft = "6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+libc = "0.2.189"
+
 [[bin]]
 name = "pixelfixer"
 path = "src/main.rs"
