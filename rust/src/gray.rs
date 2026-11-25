@@ -7,9 +7,7 @@ pub fn to_gray(rgba: &[u8], w: usize, h: usize) -> Vec<f32> {
     for i in 0..w * h {
         let p = i * 4;
         let a = rgba[p + 3] as f32 / 255.0;
-        let lum = 0.299 * rgba[p] as f32
-            + 0.587 * rgba[p + 1] as f32
-            + 0.114 * rgba[p + 2] as f32;
+        let lum = 0.299 * rgba[p] as f32 + 0.587 * rgba[p + 1] as f32 + 0.114 * rgba[p + 2] as f32;
         g[i] = lum * a + 127.5 * (1.0 - a);
     }
     g

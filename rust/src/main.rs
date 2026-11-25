@@ -1,6 +1,7 @@
 use pixelfixer::{autocorr, core, reconstruct, runlengths, selfsim};
 
 /// Peak working-set size (bytes) of this process, via psapi.
+#[cfg(windows)]
 fn peak_rss() -> u64 {
     #[repr(C)]
     struct Pmc {
@@ -31,12 +32,30 @@ fn peak_rss() -> u64 {
     }
 }
 
+#[cfg(not(windows))]
+fn peak_rss() -> u64 {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|line| line.starts_with("VmHWM:"))
+                .and_then(|line| line.split_whitespace().nth(1))
+                .and_then(|kb| kb.parse::<u64>().ok())
+                .map(|kb| kb * 1024)
+        })
+        .unwrap_or(0)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
         eprintln!("usage: pixelfixer <command> ...");
-        eprintln!("  process    <image> <out.png> [full|fast]  detect + reconstruct (default full)");
-        eprintln!("  fast       <image...>                   fast consensus detection, JSON per line");
+        eprintln!(
+            "  process    <image> <out.png> [full|fast]  detect + reconstruct (default full)"
+        );
+        eprintln!(
+            "  fast       <image...>                   fast consensus detection, JSON per line"
+        );
         eprintln!("  recon      <image> <sx> <sy> <cols> <rows> <out.png> [dark]");
         eprintln!("  autocorr   <image...>                   single-channel detection (debug)");
         eprintln!("  runlengths <image...>                   single-channel detection (debug)");
@@ -84,8 +103,10 @@ fn main() {
                 fail("image too small (min side 16px)");
             }
             if w * h > 4_000_000 {
-                fail(&format!("image too large ({:.1}MP > 4MP limit)",
-                              (w * h) as f64 / 1e6));
+                fail(&format!(
+                    "image too large ({:.1}MP > 4MP limit)",
+                    (w * h) as f64 / 1e6
+                ));
             }
             let t0 = std::time::Instant::now();
             let d = if mode == "fast" {
@@ -100,13 +121,18 @@ fn main() {
             // old mode-vote reconstruction.
             let r = if args.iter().any(|s| s == "legacy") {
                 reconstruct::reconstruct(
-                    img.as_raw(), w, h, d.step_x, d.step_y,
-                    d.cols as usize, d.rows as usize, false, false,
+                    img.as_raw(),
+                    w,
+                    h,
+                    d.step_x,
+                    d.step_y,
+                    d.cols as usize,
+                    d.rows as usize,
+                    false,
+                    false,
                 )
             } else {
-                reconstruct::two_stage_pack(
-                    img.as_raw(), w, h, d.cols as usize, d.rows as usize, 0,
-                )
+                reconstruct::two_stage_pack(img.as_raw(), w, h, d.cols as usize, d.rows as usize, 0)
             };
             let recon_s = t0.elapsed().as_secs_f64();
             let buf = match image::RgbaImage::from_raw(r.cols as u32, r.rows as u32, r.rgba) {
@@ -137,10 +163,20 @@ fn main() {
             let img = image::open(path).unwrap().to_rgba8();
             let (w, h) = (img.width() as usize, img.height() as usize);
             let t0 = std::time::Instant::now();
-            let r = reconstruct::reconstruct(img.as_raw(), w, h, sx, sy, cols, rows, dark, auto_palette);
+            let r = reconstruct::reconstruct(
+                img.as_raw(),
+                w,
+                h,
+                sx,
+                sy,
+                cols,
+                rows,
+                dark,
+                auto_palette,
+            );
             let dt = t0.elapsed().as_secs_f64();
-            let buf = image::RgbaImage::from_raw(r.cols as u32, r.rows as u32, r.rgba)
-                .expect("size");
+            let buf =
+                image::RgbaImage::from_raw(r.cols as u32, r.rows as u32, r.rgba).expect("size");
             buf.save(out_path).unwrap();
             println!(
                 "{{\"file\": {:?}, \"cols\": {}, \"rows\": {}, \"secs\": {:.3}}}",

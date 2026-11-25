@@ -210,7 +210,9 @@ pub fn kmeans_quantize_rgba(rgba: &[u8], w: usize, h: usize, k: usize) -> Vec<u8
         }
         for c in 0..3 {
             // np.rint = banker's
-            out[p + c] = (centers[best][c] as f64).round_ties_even().clamp(0.0, 255.0) as u8;
+            out[p + c] = (centers[best][c] as f64)
+                .round_ties_even()
+                .clamp(0.0, 255.0) as u8;
         }
     }
     out
@@ -218,8 +220,7 @@ pub fn kmeans_quantize_rgba(rgba: &[u8], w: usize, h: usize, k: usize) -> Vec<u8
 
 /// Adaptive structure-only K from coarse (4-bit) colour complexity of the
 /// opaque pixels; mirrors detector.reconstruct.adaptive_k.
-pub fn adaptive_k(rgba: &[u8], w: usize, h: usize, lo: usize, hi: usize,
-                  share: f64) -> usize {
+pub fn adaptive_k(rgba: &[u8], w: usize, h: usize, lo: usize, hi: usize, share: f64) -> usize {
     let mut cnt = vec![0u32; 4096];
     let mut total = 0u64;
     for i in 0..w * h {
@@ -234,7 +235,10 @@ pub fn adaptive_k(rgba: &[u8], w: usize, h: usize, lo: usize, hi: usize,
     if total == 0 {
         return lo;
     }
-    let k = cnt.iter().filter(|&&c| c as f64 / total as f64 >= share).count();
+    let k = cnt
+        .iter()
+        .filter(|&&c| c as f64 / total as f64 >= share)
+        .count();
     k.clamp(lo, hi)
 }
 
@@ -244,13 +248,21 @@ pub fn kmeans_labels(rgba: &[u8], w: usize, h: usize, k: usize) -> (Vec<u32>, us
     use rayon::prelude::*;
     let n = w * h;
     let opaque: Vec<usize> = (0..n).filter(|&i| rgba[i * 4 + 3] > 0).collect();
-    let src: Vec<usize> = if opaque.is_empty() { (0..n).collect() } else { opaque };
+    let src: Vec<usize> = if opaque.is_empty() {
+        (0..n).collect()
+    } else {
+        opaque
+    };
     let sample_idx = even_sample(src.len(), 60_000);
     let sample: Vec<[f32; 3]> = sample_idx
         .iter()
         .map(|&si| {
             let i = src[si];
-            [rgba[i * 4] as f32, rgba[i * 4 + 1] as f32, rgba[i * 4 + 2] as f32]
+            [
+                rgba[i * 4] as f32,
+                rgba[i * 4 + 1] as f32,
+                rgba[i * 4 + 2] as f32,
+            ]
         })
         .collect();
     let k_eff = k.min(sample.len()).max(1);
@@ -259,7 +271,11 @@ pub fn kmeans_labels(rgba: &[u8], w: usize, h: usize, k: usize) -> (Vec<u32>, us
     let labels: Vec<u32> = (0..n)
         .into_par_iter()
         .map(|i| {
-            let p = [rgba[i * 4] as f32, rgba[i * 4 + 1] as f32, rgba[i * 4 + 2] as f32];
+            let p = [
+                rgba[i * 4] as f32,
+                rgba[i * 4 + 1] as f32,
+                rgba[i * 4 + 2] as f32,
+            ];
             let mut best = 0u32;
             let mut bd = f32::INFINITY;
             for (ci, c) in centers.iter().enumerate() {

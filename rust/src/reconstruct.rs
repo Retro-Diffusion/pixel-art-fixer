@@ -16,10 +16,8 @@ fn axis_profile(rgba: &[u8], w: usize, h: usize, axis: usize) -> Vec<f64> {
     for i in 0..w * h {
         let p = i * 4;
         let a = rgba[p + 3] as f32 / 255.0;
-        g[i] = (0.299 * rgba[p] as f32
-            + 0.587 * rgba[p + 1] as f32
-            + 0.114 * rgba[p + 2] as f32)
-            * a;
+        g[i] =
+            (0.299 * rgba[p] as f32 + 0.587 * rgba[p + 1] as f32 + 0.114 * rgba[p + 2] as f32) * a;
     }
     if axis == 0 {
         // diff along x, sum over rows (f64 accumulate, f32-rounded like numpy)
@@ -101,8 +99,7 @@ impl Sat {
                 let area = (((y1 - y0) * (x1 - x0)) as f64).max(1.0);
                 let mut m2 = 0f64;
                 for ch in 0..3 {
-                    let s1 = self.s1[d][ch] - self.s1[b][ch] - self.s1[c][ch]
-                        + self.s1[a][ch];
+                    let s1 = self.s1[d][ch] - self.s1[b][ch] - self.s1[c][ch] + self.s1[a][ch];
                     let m = s1 / area;
                     m2 += m * m;
                 }
@@ -206,7 +203,11 @@ fn snapped_cuts(profile: &[f64], step: f64, phase: f64, extent: usize, n_cells: 
     };
     let min_gap = std::cmp::max(1, (0.55 * step).floor() as i64);
     let first = phase.rem_euclid(step);
-    let base = if first >= 0.5 * step { first } else { first + step };
+    let base = if first >= 0.5 * step {
+        first
+    } else {
+        first + step
+    };
     let mut prev = 0i64;
     for j in 1..n_cells {
         let t = base + (j as f64 - 1.0) * step;
@@ -261,9 +262,7 @@ fn banded_cuts(
     let extent = if axis == 0 { w } else { h };
     let n_bands = ((perp as f64 / (step * 7.0)).clamp(1.0, 12.0)) as usize;
     let bstep = perp as f64 / n_bands as f64;
-    let edges: Vec<usize> = (0..=n_bands)
-        .map(|i| (i as f64 * bstep) as usize)
-        .collect();
+    let edges: Vec<usize> = (0..=n_bands).map(|i| (i as f64 * bstep) as usize).collect();
     if n_bands <= 1 {
         return (edges, vec![base_cuts.iter().map(|&c| c as f64).collect()]);
     }
@@ -272,10 +271,8 @@ fn banded_cuts(
     for i in 0..w * h {
         let p = i * 4;
         let a = rgba[p + 3] as f32 / 255.0;
-        g[i] = (0.299 * rgba[p] as f32
-            + 0.587 * rgba[p + 1] as f32
-            + 0.114 * rgba[p + 2] as f32)
-            * a;
+        g[i] =
+            (0.299 * rgba[p] as f32 + 0.587 * rgba[p + 1] as f32 + 0.114 * rgba[p + 2] as f32) * a;
     }
 
     let rad = std::cmp::max(1, pyround(step * 0.3) as i64);
@@ -406,37 +403,43 @@ fn warped_index(
     let centers: Vec<f64> = (0..n_b)
         .map(|i| (edges[i] + edges[i + 1]) as f64 / 2.0)
         .collect();
-    out.par_chunks_mut(extent).enumerate().for_each(|(r, orow)| {
-        let t = r as f64;
-        // continuous polyline positions at this scanline (monotone-forced)
-        let mut line = vec![0f64; n_cuts];
-        // np.interp over band centers with clamped extrapolation
-        let seg = if t <= centers[0] {
-            0
-        } else if t >= centers[n_b - 1] {
-            n_b - 1
-        } else {
-            let mut s = 0;
-            while s + 1 < n_b && centers[s + 1] < t {
-                s += 1;
-            }
-            s
-        };
-        for j in 0..n_cuts {
-            let v = if t <= centers[0] {
-                bands[0][j]
+    out.par_chunks_mut(extent)
+        .enumerate()
+        .for_each(|(r, orow)| {
+            let t = r as f64;
+            // continuous polyline positions at this scanline (monotone-forced)
+            let mut line = vec![0f64; n_cuts];
+            // np.interp over band centers with clamped extrapolation
+            let seg = if t <= centers[0] {
+                0
             } else if t >= centers[n_b - 1] {
-                bands[n_b - 1][j]
+                n_b - 1
             } else {
-                let f = (t - centers[seg]) / (centers[seg + 1] - centers[seg]);
-                bands[seg][j] * (1.0 - f) + bands[seg + 1][j] * f
+                let mut s = 0;
+                while s + 1 < n_b && centers[s + 1] < t {
+                    s += 1;
+                }
+                s
             };
-            line[j] = if j > 0 && v < line[j - 1] { line[j - 1] } else { v };
-        }
-        for x in 0..extent {
-            orow[x] = cell_of(&line, x as f64 + 0.5).clamp(0, n_cells as i64 - 1);
-        }
-    });
+            for j in 0..n_cuts {
+                let v = if t <= centers[0] {
+                    bands[0][j]
+                } else if t >= centers[n_b - 1] {
+                    bands[n_b - 1][j]
+                } else {
+                    let f = (t - centers[seg]) / (centers[seg + 1] - centers[seg]);
+                    bands[seg][j] * (1.0 - f) + bands[seg + 1][j] * f
+                };
+                line[j] = if j > 0 && v < line[j - 1] {
+                    line[j - 1]
+                } else {
+                    v
+                };
+            }
+            for x in 0..extent {
+                orow[x] = cell_of(&line, x as f64 + 0.5).clamp(0, n_cells as i64 - 1);
+            }
+        });
     out
 }
 
@@ -610,9 +613,7 @@ pub fn reconstruct(
         let f = (y as f64 + 0.5 - lo) / (hi - lo).max(1.0);
         wy[y] = 1.0 - 2.0 * (f - 0.5).abs();
     }
-    let wgt: Vec<f64> = (0..w * h)
-        .map(|i| wy[i / w] * wx[i % w] + 1e-4)
-        .collect();
+    let wgt: Vec<f64> = (0..w * h).map(|i| wy[i / w] * wx[i % w] + 1e-4).collect();
 
     let mut cnt = vec![0f64; n];
     let mut mean = vec![[0f64; 3]; n];
@@ -773,7 +774,11 @@ pub fn reconstruct(
         }
         out_rgba[ci * 4 + 3] = if asum[ci] / cnt[ci] > 0.5 { 255 } else { 0 };
     }
-    ReconOut { rgba: out_rgba, cols: ncx, rows: ncy }
+    ReconOut {
+        rgba: out_rgba,
+        cols: ncx,
+        rows: ncy,
+    }
 }
 
 /// Two-stage packing on a regular even grid (mirrors
@@ -783,8 +788,14 @@ pub fn reconstruct(
 /// cell vote among the clean quantised labels -> crisp placement.
 /// Stage 2 (COLOUR): colour each cell from the ORIGINAL pixels carrying the
 /// winning label -> crisp lines AND accurate, un-clamped colours.
-pub fn two_stage_pack(rgba: &[u8], w: usize, h: usize, cols: usize, rows: usize,
-                      k_colors: usize) -> ReconOut {
+pub fn two_stage_pack(
+    rgba: &[u8],
+    w: usize,
+    h: usize,
+    cols: usize,
+    rows: usize,
+    k_colors: usize,
+) -> ReconOut {
     let k_req = if k_colors > 0 {
         k_colors
     } else {
@@ -875,7 +886,11 @@ pub fn two_stage_pack(rgba: &[u8], w: usize, h: usize, cols: usize, rows: usize,
     let mut out_rgba = vec![0u8; n * 4];
     for c in 0..n {
         let color = if selcnt[c] >= 0.5 && wden[c] > 1e-9 {
-            [csum[c][0] / wden[c], csum[c][1] / wden[c], csum[c][2] / wden[c]]
+            [
+                csum[c][0] / wden[c],
+                csum[c][1] / wden[c],
+                csum[c][2] / wden[c],
+            ]
         } else {
             let cc = cnt[c].max(1.0);
             [msum[c][0] / cc, msum[c][1] / cc, msum[c][2] / cc]
@@ -883,7 +898,15 @@ pub fn two_stage_pack(rgba: &[u8], w: usize, h: usize, cols: usize, rows: usize,
         for ch in 0..3 {
             out_rgba[c * 4 + ch] = pyround(color[ch] * 255.0).clamp(0.0, 255.0) as u8;
         }
-        out_rgba[c * 4 + 3] = if asum[c] / cnt[c].max(1.0) > 0.5 { 255 } else { 0 };
+        out_rgba[c * 4 + 3] = if asum[c] / cnt[c].max(1.0) > 0.5 {
+            255
+        } else {
+            0
+        };
     }
-    ReconOut { rgba: out_rgba, cols, rows }
+    ReconOut {
+        rgba: out_rgba,
+        cols,
+        rows,
+    }
 }

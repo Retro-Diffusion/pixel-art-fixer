@@ -79,8 +79,10 @@ impl CellVarContrast {
         for &y0 in &by {
             for &x0 in &bx {
                 let rect = |ch: usize| {
-                    scflat[idx(y0 + bs, x0 + bs, ch)] - scflat[idx(y0, x0 + bs, ch)]
-                        - scflat[idx(y0 + bs, x0, ch)] + scflat[idx(y0, x0, ch)]
+                    scflat[idx(y0 + bs, x0 + bs, ch)]
+                        - scflat[idx(y0, x0 + bs, ch)]
+                        - scflat[idx(y0 + bs, x0, ch)]
+                        + scflat[idx(y0, x0, ch)]
                 };
                 let mut msq = 0f64;
                 for ch in 0..c {
@@ -113,7 +115,9 @@ impl CellVarContrast {
                 .collect();
             let mut pairs: Vec<(f64, f64)> = sel.iter().map(|&i| (px[i], py[i])).collect();
             pairs.sort_by(|a, b| {
-                (a.1 * w as f64 + a.0).partial_cmp(&(b.1 * w as f64 + b.0)).unwrap()
+                (a.1 * w as f64 + a.0)
+                    .partial_cmp(&(b.1 * w as f64 + b.0))
+                    .unwrap()
             });
             px = pairs.iter().map(|p| p.0).collect();
             py = pairs.iter().map(|p| p.1).collect();
@@ -123,7 +127,16 @@ impl CellVarContrast {
         } else {
             total_var
         };
-        CellVarContrast { w, h, c, scflat, total_var, active_var, px, py }
+        CellVarContrast {
+            w,
+            h,
+            c,
+            scflat,
+            total_var,
+            active_var,
+            px,
+            py,
+        }
     }
 
     /// Mean within-cell variance over active points (integer-snapped

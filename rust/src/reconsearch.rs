@@ -110,7 +110,11 @@ fn eigh3_desc(cov: [[f64; 3]; 3]) -> ([f64; 3], [[f64; 3]; 3]) {
     }
     let mut order = [0usize, 1, 2];
     order.sort_by(|&i, &j| a[j][j].partial_cmp(&a[i][i]).unwrap());
-    let evals = [a[order[0]][order[0]], a[order[1]][order[1]], a[order[2]][order[2]]];
+    let evals = [
+        a[order[0]][order[0]],
+        a[order[1]][order[1]],
+        a[order[2]][order[2]],
+    ];
     let mut evecs = [[0f64; 3]; 3]; // evecs[comp][channel]
     for (oi, &o) in order.iter().enumerate() {
         for ch in 0..3 {
@@ -168,7 +172,11 @@ pub fn prep(rgba: &[u8], w: usize, h: usize) -> (Vec<f32>, usize) {
     let (_evals, evecs) = eigh3_desc(cov);
 
     let amean = alpha.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-    let avar = alpha.iter().map(|&v| (v as f64 - amean).powi(2)).sum::<f64>() / n as f64;
+    let avar = alpha
+        .iter()
+        .map(|&v| (v as f64 - amean).powi(2))
+        .sum::<f64>()
+        / n as f64;
     let use_alpha = avar.sqrt() > 2.0;
     let nc = if use_alpha { 3 } else { 2 };
 
@@ -198,7 +206,7 @@ pub struct AxisData {
     _h: usize,
     w: usize,
     c: usize,
-    s: Vec<f32>, // (H, W+1, C) cumsum
+    s: Vec<f32>,   // (H, W+1, C) cumsum
     q_t: Vec<f64>, // per-rowblock total sq sums (nbr)
     r_edges: Vec<usize>,
     nbr: usize,
@@ -219,9 +227,7 @@ impl AxisData {
         // row subsample: linspace(0, rows0-1, 360).astype(int)
         let rows_idx: Vec<usize> = if rows0 > MAX_ROWS {
             (0..MAX_ROWS)
-                .map(|i| {
-                    (i as f64 * (rows0 as f64 - 1.0) / (MAX_ROWS as f64 - 1.0)) as usize
-                })
+                .map(|i| (i as f64 * (rows0 as f64 - 1.0) / (MAX_ROWS as f64 - 1.0)) as usize)
                 .collect()
         } else {
             (0..rows0).collect()
@@ -271,7 +277,16 @@ impl AxisData {
             }
             t_sum += (q_t[b] - en1).max(1e-9);
         }
-        AxisData { _h: hh, w: cols, c: nc, s, q_t, r_edges, nbr, t_sum }
+        AxisData {
+            _h: hh,
+            w: cols,
+            c: nc,
+            s,
+            q_t,
+            r_edges,
+            nbr,
+            t_sum,
+        }
     }
 
     fn n_phase(&self, s: f64, dense: bool) -> usize {
