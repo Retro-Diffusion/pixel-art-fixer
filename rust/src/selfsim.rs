@@ -34,9 +34,7 @@ fn luma(rgba: &[u8], w: usize, h: usize) -> Plane {
     let mut data = vec![0f32; w * h];
     for i in 0..w * h {
         let p = i * 4;
-        data[i] = rgba[p] as f32 * 0.299
-            + rgba[p + 1] as f32 * 0.587
-            + rgba[p + 2] as f32 * 0.114;
+        data[i] = rgba[p] as f32 * 0.299 + rgba[p + 1] as f32 * 0.587 + rgba[p + 2] as f32 * 0.114;
     }
     Plane { data, w, h }
 }
@@ -117,8 +115,16 @@ fn gradmag(y: &Plane) -> Plane {
     let mut out = vec![0f32; w * h];
     for r in 0..h {
         for c in 0..w {
-            let gx = if c == 0 { 0.0 } else { (y.at(r, c) - y.at(r, c - 1)).abs() };
-            let gy = if r == 0 { 0.0 } else { (y.at(r, c) - y.at(r - 1, c)).abs() };
+            let gx = if c == 0 {
+                0.0
+            } else {
+                (y.at(r, c) - y.at(r, c - 1)).abs()
+            };
+            let gy = if r == 0 {
+                0.0
+            } else {
+                (y.at(r, c) - y.at(r - 1, c)).abs()
+            };
             out[r * w + c] = gx + gy;
         }
     }
@@ -151,7 +157,11 @@ fn transpose_plane(p: &Plane) -> Plane {
             data[x * p.h + y] = p.data[y * p.w + x];
         }
     }
-    Plane { data, w: p.h, h: p.w }
+    Plane {
+        data,
+        w: p.h,
+        h: p.w,
+    }
 }
 
 /// np.unique(np.linspace(0, n, parts+1)[:-1].astype(int))
@@ -263,8 +273,12 @@ fn group(num: &[Vec<Vec<f64>>], den: &[Vec<Vec<f64>>], gy: usize, gx: usize) -> 
     let ny = num.len();
     let nx = num[0].len();
     let t_len = num[0][0].len();
-    let ys: Vec<usize> = (0..=gy).map(|i| (ny as f64 * i as f64 / gy as f64) as usize).collect();
-    let xs: Vec<usize> = (0..=gx).map(|i| (nx as f64 * i as f64 / gx as f64) as usize).collect();
+    let ys: Vec<usize> = (0..=gy)
+        .map(|i| (ny as f64 * i as f64 / gy as f64) as usize)
+        .collect();
+    let xs: Vec<usize> = (0..=gx)
+        .map(|i| (nx as f64 * i as f64 / gx as f64) as usize)
+        .collect();
     let mut out: Vec<Vec<f64>> = Vec::with_capacity(gy * gx);
     for a in 0..gy {
         for b in 0..gx {
@@ -322,7 +336,11 @@ fn comb_tstat(dm: &[f64], p_grid: &[f64], kcap: usize) -> Vec<f64> {
     } else {
         d2.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let n = d2.len();
-        (if n % 2 == 1 { d2[n / 2] } else { 0.5 * (d2[n / 2 - 1] + d2[n / 2]) }) + 1e-9
+        (if n % 2 == 1 {
+            d2[n / 2]
+        } else {
+            0.5 * (d2[n / 2 - 1] + d2[n / 2])
+        }) + 1e-9
     };
     let boxm = |q: f64, p: f64| -> f64 {
         let lo = (q - p / 2.0).max(1.0);
@@ -557,7 +575,11 @@ fn detect_axis(feats: [(&Plane, f64); 3], wt: &Plane, size: usize) -> SsAxis {
     }
     let smax = stot[peaks[0]];
     let floor = (QUALIFY_FRAC * smax).max(QUALIFY_ABS);
-    let qual: Vec<usize> = peaks.iter().cloned().filter(|&i| stot[i] >= floor).collect();
+    let qual: Vec<usize> = peaks
+        .iter()
+        .cloned()
+        .filter(|&i| stot[i] >= floor)
+        .collect();
     let mut best_i = if qual.is_empty() {
         peaks[0]
     } else {
@@ -600,8 +622,10 @@ fn detect_axis(feats: [(&Plane, f64); 3], wt: &Plane, size: usize) -> SsAxis {
     let tile_votes = |center: f64| -> (Vec<f64>, Vec<f64>) {
         let win = (VOTE_WIN * center).max(6.0 * PSTEP);
         let lo = std::cmp::max(pyround((center - win - p_grid[0]) / PSTEP) as i64, 0) as usize;
-        let hi = std::cmp::min(pyround((center + win - p_grid[0]) / PSTEP) as i64 + 1, np_ as i64)
-            as usize;
+        let hi = std::cmp::min(
+            pyround((center + win - p_grid[0]) / PSTEP) as i64 + 1,
+            np_ as i64,
+        ) as usize;
         let mut vs = Vec::new();
         let mut ws = Vec::new();
         for i in 0..s_fine.len() {
@@ -668,7 +692,10 @@ fn detect_axis(feats: [(&Plane, f64); 3], wt: &Plane, size: usize) -> SsAxis {
         }
         s0
     };
-    SsAxis { s: s0, conf: stot[best_i] }
+    SsAxis {
+        s: s0,
+        conf: stot[best_i],
+    }
 }
 
 pub struct SsDetection {

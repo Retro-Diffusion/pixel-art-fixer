@@ -74,7 +74,10 @@ fn build_moments(rgb: &[[u8; 3]]) -> Moments {
 fn box_sum(m: &[f64], bx: Box6) -> f64 {
     let (r0, r1, g0, g1, b0, b1) = bx;
     m[at(r1, g1, b1)] - m[at(r1, g1, b0)] - m[at(r1, g0, b1)] + m[at(r1, g0, b0)]
-        - m[at(r0, g1, b1)] + m[at(r0, g1, b0)] + m[at(r0, g0, b1)] - m[at(r0, g0, b0)]
+        - m[at(r0, g1, b1)]
+        + m[at(r0, g1, b0)]
+        + m[at(r0, g0, b1)]
+        - m[at(r0, g0, b0)]
 }
 
 fn variance(bx: Box6, m: &Moments) -> f64 {
@@ -214,7 +217,11 @@ pub fn quantize(rgb: &[[u8; 3]], k: usize) -> (Vec<[f64; 3]>, Vec<usize>) {
     let labels: Vec<usize> = rgb
         .iter()
         .map(|px| {
-            let p = [px[0] as f64 / 255.0, px[1] as f64 / 255.0, px[2] as f64 / 255.0];
+            let p = [
+                px[0] as f64 / 255.0,
+                px[1] as f64 / 255.0,
+                px[2] as f64 / 255.0,
+            ];
             let mut best = 0usize;
             let mut bd = f64::INFINITY;
             for (ci, c) in pal.iter().enumerate() {

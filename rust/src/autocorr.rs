@@ -150,11 +150,8 @@ pub fn axis_estimate(
         }
         if best_j != 0 {
             let chosen = top[best_j];
-            let mut rest: Vec<(f64, f64)> = cands
-                .iter()
-                .cloned()
-                .filter(|&c| c != chosen)
-                .collect();
+            let mut rest: Vec<(f64, f64)> =
+                cands.iter().cloned().filter(|&c| c != chosen).collect();
             let mut new_cands = vec![chosen];
             new_cands.append(&mut rest);
             cands = new_cands;
@@ -173,12 +170,7 @@ pub fn axis_estimate(
 }
 
 /// Drift-aware cell count via windowed local ACF step integration.
-pub fn local_count(
-    maps: &[FeatMap],
-    extent: usize,
-    s0: f64,
-    planner: &mut FftPlanner<f64>,
-) -> f64 {
+pub fn local_count(maps: &[FeatMap], extent: usize, s0: f64, planner: &mut FftPlanner<f64>) -> f64 {
     let uniform = extent as f64 / s0;
     let nw = (extent as f64 / (14.0 * s0)).clamp(1.0, 8.0) as usize;
     if nw < 2 || uniform < 96.0 {
@@ -212,7 +204,10 @@ pub fn local_count(
                 }
             }
             let scan: Vec<f64> = arange(0.85, 1.18, 0.01).iter().map(|f| s0 * f).collect();
-            let sc: Vec<f64> = scan.iter().map(|&s| comb_score(&ac_loc, s, 12, 8.0)).collect();
+            let sc: Vec<f64> = scan
+                .iter()
+                .map(|&s| comb_score(&ac_loc, s, 12, 8.0))
+                .collect();
             let s_glob = comb_score(&ac_loc, s0, 12, 8.0);
             let sc_max = sc.iter().cloned().fold(f64::MIN, f64::max);
             let s_i = if sc_max > (1.6 * s_glob.max(0.0)).max(0.02) {
@@ -254,15 +249,35 @@ pub struct Detection {
 pub fn build_maps(g: &[f32], gq: &[f32], w: usize, h: usize, y_axis: bool) -> Vec<FeatMap> {
     if !y_axis {
         vec![
-            FeatMap { data: d2x(g, w, h), lines: h, extent: w, weight: 1.0 },
-            FeatMap { data: d1x(gq, w, h), lines: h, extent: w, weight: 0.7 },
+            FeatMap {
+                data: d2x(g, w, h),
+                lines: h,
+                extent: w,
+                weight: 1.0,
+            },
+            FeatMap {
+                data: d1x(gq, w, h),
+                lines: h,
+                extent: w,
+                weight: 0.7,
+            },
         ]
     } else {
         let gt = transpose(g, w, h);
         let gqt = transpose(gq, w, h);
         vec![
-            FeatMap { data: d2x(&gt, h, w), lines: w, extent: h, weight: 1.0 },
-            FeatMap { data: d1x(&gqt, h, w), lines: w, extent: h, weight: 0.7 },
+            FeatMap {
+                data: d2x(&gt, h, w),
+                lines: w,
+                extent: h,
+                weight: 1.0,
+            },
+            FeatMap {
+                data: d1x(&gqt, h, w),
+                lines: w,
+                extent: h,
+                weight: 0.7,
+            },
         ]
     }
 }
@@ -286,12 +301,25 @@ pub fn prepare(rgba: &[u8], w: usize, h: usize) -> Pre {
         || axis_estimate(&maps_x, w, &mut FftPlanner::new()),
         || axis_estimate(&maps_y, h, &mut FftPlanner::new()),
     );
-    Pre { maps_x, maps_y, ex, ey }
+    Pre {
+        maps_x,
+        maps_y,
+        ex,
+        ey,
+    }
 }
 
 pub fn detect_pre(pre: &Pre, w: usize, h: usize) -> Detection {
     let mut planner = FftPlanner::new();
-    detect_from_estimates(&pre.maps_x, &pre.maps_y, w, h, &pre.ex, &pre.ey, &mut planner)
+    detect_from_estimates(
+        &pre.maps_x,
+        &pre.maps_y,
+        w,
+        h,
+        &pre.ex,
+        &pre.ey,
+        &mut planner,
+    )
 }
 
 pub fn detect(rgba: &[u8], w: usize, h: usize) -> Detection {
@@ -339,7 +367,9 @@ pub fn detect_from_estimates(
         let mut best_sum = 0f64;
         for &(s1, z1) in cx.iter().take(6) {
             for &(s2, z2) in cy.iter().take(6) {
-                if (s1 / s2).ln().abs() <= 0.08 && z1 >= 0.6 * zx0 && z2 >= 0.6 * zy0
+                if (s1 / s2).ln().abs() <= 0.08
+                    && z1 >= 0.6 * zx0
+                    && z2 >= 0.6 * zy0
                     && z1 + z2 > best_sum
                 {
                     best_sum = z1 + z2;
@@ -377,10 +407,18 @@ pub fn detect_from_estimates(
         let score_b = zy0 + move_x.map_or(-1e9, |m| m.1);
         if let (Some(my), true) = (move_y, move_y.is_some() && score_a >= score_b) {
             let s_new = refine_step_acf(&ey.acf, my.0, 24);
-            sy = if (s_new / my.0).ln().abs() < 0.04 { s_new } else { my.0 };
+            sy = if (s_new / my.0).ln().abs() < 0.04 {
+                s_new
+            } else {
+                my.0
+            };
         } else if let Some(mx) = move_x {
             let s_new = refine_step_acf(&ex.acf, mx.0, 24);
-            sx = if (s_new / mx.0).ln().abs() < 0.04 { s_new } else { mx.0 };
+            sx = if (s_new / mx.0).ln().abs() < 0.04 {
+                s_new
+            } else {
+                mx.0
+            };
         }
     }
 

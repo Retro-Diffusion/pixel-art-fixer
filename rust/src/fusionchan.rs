@@ -142,7 +142,14 @@ fn grad_maps(orig: &[f32], quant: &[f32], w: usize, h: usize) -> GradMaps {
             coy[y * w + x] = s.sqrt();
         }
     }
-    GradMaps { dqx, dqy, cox, coy, w, h }
+    GradMaps {
+        dqx,
+        dqy,
+        cox,
+        coy,
+        w,
+        h,
+    }
 }
 
 // ---------------------------------------------------------------- jpeg
@@ -272,7 +279,8 @@ pub fn tile_peaks(dmap: &[f32], rows: usize, cols: usize, offset: usize) -> Vec<
                 }
                 let scale = percentile(&prof, 95.0);
                 if scale > 0.0 {
-                    let norm: Vec<f64> = prof.iter().map(|&v| (v / scale).clamp(0.0, 1.5)).collect();
+                    let norm: Vec<f64> =
+                        prof.iter().map(|&v| (v / scale).clamp(0.0, 1.5)).collect();
                     let (pk, hts) = find_peaks(&norm, 0.2, 2.0);
                     if pk.len() >= 4 {
                         tiles.push(Tile {
@@ -291,11 +299,14 @@ pub fn tile_peaks(dmap: &[f32], rows: usize, cols: usize, offset: usize) -> Vec<
         let idx: Vec<usize> = (0..360)
             .map(|i| (i as f64 * (tiles.len() as f64 - 1.0) / 359.0) as usize)
             .collect();
-        tiles = idx.into_iter().map(|i| Tile {
-            pos: tiles[i].pos.clone(),
-            heights: tiles[i].heights.clone(),
-            extent: tiles[i].extent,
-        }).collect();
+        tiles = idx
+            .into_iter()
+            .map(|i| Tile {
+                pos: tiles[i].pos.clone(),
+                heights: tiles[i].heights.clone(),
+                extent: tiles[i].extent,
+            })
+            .collect();
     }
     tiles
 }
@@ -354,10 +365,19 @@ pub struct Spectrum {
 
 /// Welch-averaged power spectrum of gradient scanline groups (row_group=4,
 /// Hann window, hop win/2), pre-oriented map (rows x cols).
-pub fn axis_spectrum(dmap: &[f32], rows: usize, cols: usize, planner: &mut FftPlanner<f64>) -> Spectrum {
+pub fn axis_spectrum(
+    dmap: &[f32],
+    rows: usize,
+    cols: usize,
+    planner: &mut FftPlanner<f64>,
+) -> Spectrum {
     let win = cols.min(1024);
     if win < 32 {
-        return Spectrum { freqs: vec![0.0], power: vec![0.0], bg: vec![0.0] };
+        return Spectrum {
+            freqs: vec![0.0],
+            power: vec![0.0],
+            bg: vec![0.0],
+        };
     }
     // np.hanning(win): 0.5 - 0.5*cos(2*pi*i/(win-1))
     let window: Vec<f64> = (0..win)
@@ -401,7 +421,11 @@ pub fn axis_spectrum(dmap: &[f32], rows: usize, cols: usize, planner: &mut FftPl
         y0 += row_group;
     }
     if count == 0 {
-        return Spectrum { freqs: vec![0.0], power: vec![0.0], bg: vec![0.0] };
+        return Spectrum {
+            freqs: vec![0.0],
+            power: vec![0.0],
+            bg: vec![0.0],
+        };
     }
     let power: Vec<f64> = specs.iter().map(|&p| p / count as f64).collect();
     let freqs: Vec<f64> = (0..nbins).map(|k| k as f64 / win as f64).collect();
@@ -507,8 +531,20 @@ pub fn build_evidence(rgba: &[u8], w: usize, h: usize) -> Evidence {
     );
 
     Evidence {
-        x: AxisEvidence { e1: e1x, tiles1: tiles1x, tiles2: tiles2x, spec1: spec1x, extent: w },
-        y: AxisEvidence { e1: e1y, tiles1: tiles1y, tiles2: tiles2y, spec1: spec1y, extent: h },
+        x: AxisEvidence {
+            e1: e1x,
+            tiles1: tiles1x,
+            tiles2: tiles2x,
+            spec1: spec1x,
+            extent: w,
+        },
+        y: AxisEvidence {
+            e1: e1y,
+            tiles1: tiles1y,
+            tiles2: tiles2y,
+            spec1: spec1y,
+            extent: h,
+        },
         jpeg_z,
     }
 }
@@ -518,10 +554,22 @@ pub fn build_evidence(rgba: &[u8], w: usize, h: usize) -> Evidence {
 pub fn fused_curve(ev_axis: &AxisEvidence, steps: &[f64]) -> Vec<f64> {
     let e1_norm = normalise(&ev_axis.e1);
     let cols: Vec<Vec<f64>> = vec![
-        steps.par_iter().map(|&s| rayleigh_score(&e1_norm, s)).collect(),
-        steps.par_iter().map(|&s| tiles_ray_z(&ev_axis.tiles1, s)).collect(),
-        steps.par_iter().map(|&s| tiles_ray_z(&ev_axis.tiles2, s)).collect(),
-        steps.par_iter().map(|&s| spectral_z(&ev_axis.spec1, s)).collect(),
+        steps
+            .par_iter()
+            .map(|&s| rayleigh_score(&e1_norm, s))
+            .collect(),
+        steps
+            .par_iter()
+            .map(|&s| tiles_ray_z(&ev_axis.tiles1, s))
+            .collect(),
+        steps
+            .par_iter()
+            .map(|&s| tiles_ray_z(&ev_axis.tiles2, s))
+            .collect(),
+        steps
+            .par_iter()
+            .map(|&s| spectral_z(&ev_axis.spec1, s))
+            .collect(),
     ];
     let mut fused = vec![0f64; steps.len()];
     for col in &cols {

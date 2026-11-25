@@ -324,7 +324,11 @@ pub fn detect_full(rgba: &[u8], w: usize, h: usize) -> CoreResult {
         let curve = if x_axis { &curve_x } else { &curve_y };
         crate::sigproc::interp(s.ln(), &log_steps, curve)
     };
-    let vc_at = |s: f64| -> f64 { (vc_z_of(&vc_logs, &vc_z, s) / 10.0).clamp(0.0, 1.0).max(0.0) };
+    let vc_at = |s: f64| -> f64 {
+        (vc_z_of(&vc_logs, &vc_z, s) / 10.0)
+            .clamp(0.0, 1.0)
+            .max(0.0)
+    };
 
     let pick_axis = |x_axis: bool, ac_cands: &[(f64, f64)], extent: usize| -> f64 {
         let sources: Vec<f64> = named
@@ -357,9 +361,8 @@ pub fn detect_full(rgba: &[u8], w: usize, h: usize) -> CoreResult {
                 .iter()
                 .filter(|&&v| ((v.max(1e-9)) / s).ln().abs() < AGREE_TOL)
                 .count();
-            let mut sc = fused_at(x_axis, s)
-                + VC_W * vc_at(s)
-                + AGREE_BONUS * (agree as f64 - 1.0).max(0.0);
+            let mut sc =
+                fused_at(x_axis, s) + VC_W * vc_at(s) + AGREE_BONUS * (agree as f64 - 1.0).max(0.0);
             if recon_ok {
                 sc += 0.6 * (rn[i] / rmax);
             }

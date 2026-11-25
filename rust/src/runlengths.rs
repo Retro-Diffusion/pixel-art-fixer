@@ -252,7 +252,11 @@ pub struct PickResult {
 
 /// Best step from the comb score, with largest-near-tie divisor logic.
 pub fn pick_step(runs: &[f32], s_grid: &[f64]) -> PickResult {
-    let none = PickResult { s: None, v: 0.0, cands: Vec::new() };
+    let none = PickResult {
+        s: None,
+        v: 0.0,
+        cands: Vec::new(),
+    };
     let (s_score, total) = comb_score_grid(runs, s_grid, BIN);
     if total < 50.0 {
         return none;
@@ -281,7 +285,10 @@ pub fn pick_step(runs: &[f32], s_grid: &[f64]) -> PickResult {
 
     let fund = |s: f64| -> f64 {
         let tol = (0.6f64).max(0.18 * s);
-        let cnt = runs.iter().filter(|&&r| ((r as f64) - s).abs() < tol).count();
+        let cnt = runs
+            .iter()
+            .filter(|&&r| ((r as f64) - s).abs() < tol)
+            .count();
         cnt as f64 / total
     };
 
@@ -300,7 +307,11 @@ pub fn pick_step(runs: &[f32], s_grid: &[f64]) -> PickResult {
             break;
         }
     }
-    PickResult { s: Some(best_s), v: best_v, cands }
+    PickResult {
+        s: Some(best_s),
+        v: best_v,
+        cands,
+    }
 }
 
 fn arange(start: f64, stop: f64, step: f64) -> Vec<f64> {
@@ -395,10 +406,18 @@ pub fn integrate_step(ys: &[i64], pos: &[f64], n_perp: usize, n_scan: usize, s0:
         let dx = n_scan as f64 / tsc as f64;
         for i in 0..tp {
             let y0 = i as f64 * dy;
-            let y1 = if i + 1 == tp { n_perp as f64 } else { (i + 1) as f64 * dy };
+            let y1 = if i + 1 == tp {
+                n_perp as f64
+            } else {
+                (i + 1) as f64 * dy
+            };
             for j in 0..tsc {
                 let x0 = j as f64 * dx;
-                let x1 = if j + 1 == tsc { n_scan as f64 } else { (j + 1) as f64 * dx };
+                let x1 = if j + 1 == tsc {
+                    n_scan as f64
+                } else {
+                    (j + 1) as f64 * dx
+                };
                 tiles.push((y0, y1, x0, x1));
             }
         }
@@ -453,7 +472,14 @@ fn axis_pass(img4: &[f32], rows: usize, cols: usize, s_grid: &[f64]) -> AxisData
     let runs = lag_diffs(&ys, &pos, MAX_LAG);
     let picked = pick_step(&runs, s_grid);
     let s = picked.s.map(|s| refine(&runs, s));
-    AxisData { s, v: picked.v, cands: picked.cands, runs, ys, pos }
+    AxisData {
+        s,
+        v: picked.v,
+        cands: picked.cands,
+        runs,
+        ys,
+        pos,
+    }
 }
 
 pub fn detect(rgba: &[u8], w: usize, h: usize) -> RlDetection {
@@ -490,7 +516,11 @@ pub fn detect(rgba: &[u8], w: usize, h: usize) -> RlDetection {
     };
     if borrow_x {
         let syv = sy.unwrap();
-        let sx2 = if !ax.runs.is_empty() { refine(&ax.runs, syv) } else { syv };
+        let sx2 = if !ax.runs.is_empty() {
+            refine(&ax.runs, syv)
+        } else {
+            syv
+        };
         if (sx2 - syv).abs() < 0.15 * syv {
             sx = Some(sx2);
         }
@@ -502,7 +532,11 @@ pub fn detect(rgba: &[u8], w: usize, h: usize) -> RlDetection {
     };
     if borrow_y {
         let sxv = sx.unwrap();
-        let sy2 = if !ay.runs.is_empty() { refine(&ay.runs, sxv) } else { sxv };
+        let sy2 = if !ay.runs.is_empty() {
+            refine(&ay.runs, sxv)
+        } else {
+            sxv
+        };
         if (sy2 - sxv).abs() < 0.15 * sxv {
             sy = Some(sy2);
         }
